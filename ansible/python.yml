@@ -1,0 +1,31 @@
+---
+
+- name: check to see if pip is already installed
+  command: "pip --version"
+  ignore_errors: true
+  register: pip_is_installed
+  changed_when: false
+
+- block:
+
+    - name: download get-pip.py
+      get_url: url=https://bootstrap.pypa.io/get-pip.py  dest=/tmp
+
+    - name: install pip
+      command: "python /tmp/get-pip.py"
+
+    - name: delete get-pip.py
+      file: state=absent path=/tmp/get-pip.py
+
+  when: pip_is_installed.rc != 0
+- pip:
+    name: redis
+
+- name: Copy payload and untar
+  unarchive: src=../artifacts/pythonListener.tar dest=/home/vagrant
+
+- name: Adding the path in the bashrc file
+  lineinfile: dest=~/.bashrc line='export redishost={{ master_ip }}' insertafter='EOF' state=present
+
+- name: chmod python file
+  command: chdir=/home/vagrant/pythonListener chmod +x _.py

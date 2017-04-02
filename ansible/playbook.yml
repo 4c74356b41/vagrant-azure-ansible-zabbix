@@ -1,0 +1,38 @@
+---
+
+- hosts: master
+  gather_facts: True
+  become: True
+
+  roles:
+    - { role: geerlingguy.mysql }
+    - { role: dj-wasabi.zabbix-server, zabbix_url: localhost, database_type: mysql, database_type_long: mysql }
+
+  tasks:
+    - include: dotnet.yml
+
+  handlers:
+  - name: Redis Restart
+    service: name=redis-server state=restarted enabled=yes
+
+- hosts: slave
+  become: True
+  roles:
+    - role: dj-wasabi.zabbix-agent
+      agent_server: "{{ hostvars.master.ansible_eth0.ipv4.address }}"
+      agent_serveractive: "{{ hostvars.master.ansible_eth0.ipv4.address }}"
+      zabbix_url: 'http://{{ hostvars.master.ansible_ssh_host }}/zabbix'
+      zabbix_api_User: Admin
+      zabbix_api_pass: zabbix
+      zabbix_api_create_hostgroup: True
+      zabbix_api_create_hosts: True
+      zabbix_host_groups:
+        - Linux Servers
+      zabbix_link_templates:
+        - Template OS Linux
+
+  vars:
+    master_ip: "{{ hostvars.master.ansible_eth0.ipv4.address }}"
+
+  tasks:
+    - include: python.yml

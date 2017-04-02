@@ -1,0 +1,11 @@
+{
+    "admin_username": "rootota",
+    "location": "westeurope",
+    "resource_group_name": "xxx",
+    "tcp_endpoints": [
+        6379,
+        80
+    ],
+    "virtual_network_name": "gagrant-test",
+    "vm_size": "Standard_DS1"
+}

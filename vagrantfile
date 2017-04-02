@@ -1,0 +1,56 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+require 'json'
+require 'getoptlong'
+
+opts = GetoptLong.new(
+        [ '--count', GetoptLong::OPTIONAL_ARGUMENT ],
+        [ '--no-provision', GetoptLong::OPTIONAL_ARGUMENT ]
+)
+
+azure_data = JSON.parse(File.read('artifacts/azure.json'))
+v1 = 0
+opts.each do |opt, arg|
+  case opt
+    when '--count'
+      v1 = arg.to_i
+  end
+end
+
+Vagrant.configure('2') do |config|
+
+  config.ssh.private_key_path = '/root/.ssh/id_rsa'
+  config.vm.box = 'azure'
+  config.vm.synced_folder '.', '/vagrant', disabled: true
+
+  $groups = { "slave" => [] }
+  $groups["master"] = "master"
+
+  config.vm.define "master" do |node_dotnet|
+    node_dotnet.vm.provider :azure do |azure, override|
+      azure_data.each do |key, value|
+        azure.instance_variable_set("@#{key}", value)
+      end
+      azure.vm_name = "master"
+    end
+  end
+
+  v1.times do |i|
+    config.vm.define "slave#{i}" do |nodes_py|
+      $groups["slave"] << "slave#{i}"
+      nodes_py.vm.provider :azure do |azure, override|
+        azure_data.each do |key, value|
+          azure.instance_variable_set("@#{key}", value)
+        end 
+        azure.vm_name = "slave#{i}"
+      end
+    end
+  end
+
+  config.vm.provision "ansible" do |ansible|
+    ansible.playbook = "ansible/playbook.yml"
+    ansible.groups = $groups
+    ansible.limit = "all"
+  end
+end
