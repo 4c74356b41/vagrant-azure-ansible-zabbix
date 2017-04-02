@@ -1,0 +1,1 @@
+# vagrant-azure-ansible-zabbix
